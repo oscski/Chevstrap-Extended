@@ -42,7 +42,7 @@ class Logger private constructor() {
         }
 
         val timestamp = SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'", Locale.US).format(Date())
-        val file = File(directory, "Chevstrap_$timestamp.log")
+        val file = File(directory, "ChevstrapExtended_$timestamp.log")
 
         try {
             filestream = FileOutputStream(file, true)

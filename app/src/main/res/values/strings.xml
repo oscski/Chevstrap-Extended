@@ -3,16 +3,17 @@
 
     <!-- About -->
     <string name="about_contributors_code_title">Code</string>
+    <string name="about_contributors_frossky_desc_title">Original Chevstrap</string>
+    <string name="about_contributors_oscski_desc_title">Chevstrap Extended</string>
     <string name="about_contributors_proofreader_title">Proofreader</string>
-    <string name="about_description">Information about Chevstrap.</string>
-    <string name="about_discord_server_title">Discord server</string>
+    <string name="about_description">Information about Chevstrap Extended.</string>
     <string name="about_github_repository_title">GitHub repository</string>
     <string name="about_help_and_information">Help and information</string>
     <string name="about_license_mit">MIT licence</string>
     <string name="about_licenses_title">Licences</string>
     <string name="about_section_contributors_title">Contributors</string>
     <string name="about_section_special_thanks_title">Special Thanks</string>
-    <string name="about_special_thanks_bloxstrap_contributors_desc_title">Chevstrap was based on Bloxstrap.</string>
+    <string name="about_special_thanks_bloxstrap_contributors_desc_title">Chevstrap Extended was based on Bloxstrap.</string>
     <string name="about_title">About</string>
     <string name="about_translator_title">Translator</string>
 
@@ -20,7 +21,7 @@
     <string name="bootstrapper_status_applying_modifications">Applying changes to Roblox…</string>
     <string name="bootstrapper_status_connecting">Connecting to Roblox…</string>
     <string name="bootstrapper_status_starting_roblox">Starting Roblox</string>
-    <string name="bootstrapper_status_upgrading_chevstrap">Chevstrap’s latest version page…</string>
+    <string name="bootstrapper_status_upgrading_chevstrap">Chevstrap Extended’s latest version page…</string>
 
     <!-- Common -->
     <string name="common_add_single">Add single</string>
@@ -29,7 +30,6 @@
     <string name="common_close">Close</string>
     <string name="common_default">Default</string>
     <string name="common_discord_rich_presence">Discord Rich Presence</string>
-    <string name="common_discord_server">Discord server</string>
     <string name="common_general">General</string>
     <string name="common_high">High</string>
     <string name="common_import_from_file">Import from file</string>
@@ -78,9 +78,9 @@
     <string name="context_menu_logs_viewer_view">View</string>
 
     <!-- Dialog -->
-    <string name="dialog_access_to_roblox_directories_is_blocked">Android restricts access to Roblox\'s directories, so Chevstrap can\'t access them directly.\n\nLearn more here:</string>
+    <string name="dialog_access_to_roblox_directories_is_blocked">Android restricts access to Roblox\'s directories, so Chevstrap Extended can\'t access them directly.\n\nLearn more here:</string>
     <string name="dialog_modded_roblox_warning">Third-party modifications can interfere with Roblox. If you’re using a modified version of Roblox for exploits or reverse engineering, please uninstall it to ensure you’re not running a modified client, and get the native Roblox app from an official source such as Google Play.</string>
-    <string name="dialog_device_full_storage">Your device doesn’t have enough storage to run Chevstrap properly. Try clearing some space to continue.</string>
+    <string name="dialog_device_full_storage">Your device doesn’t have enough storage to run Chevstrap Extended properly. Try clearing some space to continue.</string>
     <string name="dialog_failed_to_apply_changes">An issue occurred while applying changes to Roblox. More information:</string>
     <string name="dialog_failed_to_import_file">An issue occurred while importing the file. More information:</string>
     <string name="dialog_failed_to_launch">An issue occurred while launching Roblox. More information:</string>
@@ -109,9 +109,9 @@
     <string name="launch_menu_wiki">See the wiki for help</string>
 
     <!-- Menu: Behaviour -->
-    <string name="menu_behaviour_check_latest_release_description">Directs you to the latest Chevstrap release page if your current version is outdated.</string>
+    <string name="menu_behaviour_check_latest_release_description">Directs you to the latest Chevstrap Extended release page if your current version is outdated.</string>
     <string name="menu_behaviour_check_latest_release_title">Check latest release</string>
-    <string name="menu_behaviour_description">Configure what Chevstrap should do when launching Roblox.</string>
+    <string name="menu_behaviour_description">Configure what Chevstrap Extended should do when launching Roblox.</string>
     <string name="menu_behaviour_preferred_roblox_app_description">Select which Roblox app to use and apply changes.</string>
     <string name="menu_behaviour_preferred_roblox_app_title">Preferred Roblox app</string>
     <string name="menu_behaviour_title">Launcher</string>
@@ -127,7 +127,7 @@
     <string name="menu_integrations_allow_activity_joining_description">Allows anybody to join the game you\'re currently in through your Discord profile.</string>
     <string name="menu_integrations_allow_activity_joining_title">Allow activity joining</string>
     <string name="menu_integrations_description">Configure additional functionality to go alongside Roblox.</string>
-    <string name="menu_integrations_enable_activity_tracking_description">Allows Chevstrap to track what Roblox experience you are playing on this device. Certain features may require this.</string>
+    <string name="menu_integrations_enable_activity_tracking_description">Allows Chevstrap Extended to track what Roblox experience you are playing on this device. Certain features may require this.</string>
     <string name="menu_integrations_enable_activity_tracking_title">Enable activity tracking</string>
     <string name="menu_integrations_game_history_description">Shows all the games you last played.</string>
     <string name="menu_integrations_game_history_title">Games History Menu</string>
@@ -151,17 +151,17 @@
     <string name="menu_integrations_title">Integrations</string>
 
     <!-- Menu: Settings -->
-    <string name="menu_settings_accordion_description_appearence">Configure how Chevstrap looks.</string>
+    <string name="menu_settings_accordion_description_appearence">Configure how Chevstrap Extended looks.</string>
     <string name="menu_settings_accordion_title_appearence">Appearance</string>
     <string name="menu_settings_background_image_description">Choose a custom image to use as the app background.</string>
     <string name="menu_settings_background_image_title">Custom Background Image</string>
     <string name="menu_settings_app_theme_in_app_title">App Theme</string>
-    <string name="menu_settings_description">Configure options related to Chevstrap’s behavior.</string>
-    <string name="menu_settings_open_logs_viewer_description">Shows every log generated by Chevstrap itself.</string>
+    <string name="menu_settings_description">Configure options related to Chevstrap Extended’s behavior.</string>
+    <string name="menu_settings_open_logs_viewer_description">Shows every log generated by Chevstrap Extended itself.</string>
     <string name="menu_settings_open_logs_viewer_title">Logs Viewer Menu</string>
 
     <!-- Menu -->
-    <string name="menu_title">Chevstrap menu</string>
+    <string name="menu_title">Chevstrap Extended menu</string>
 
     <!-- Notifications -->
     <string name="notification_connected_to_a_server">Connected to a server</string>

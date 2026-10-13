@@ -146,7 +146,7 @@ class SettingsScreen(
         addDivider()
 
         addButton(
-            "Chevstrap",
+            "Chevstrap Extended",
             R.drawable.setting_icon,
             R.drawable.setting_icon_on,
             R.drawable.setting_icon_light,

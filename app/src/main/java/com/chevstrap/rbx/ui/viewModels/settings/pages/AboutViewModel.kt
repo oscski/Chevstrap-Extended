@@ -12,10 +12,10 @@ class AboutViewModel {
         )
     }
 
-    fun discordServerPage() {
+    fun oscskiPage() {
         GlobalViewModel.openWebpage(
             App.appContext,
-            App.DISCORD_SERVER_INVITE_LINK
+            "https://github.com/oscski"
         )
     }
 

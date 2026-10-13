@@ -83,7 +83,7 @@ class SettingsScreenViewModel : ViewModel() {
             }
 
             PAGE_SETTINGS -> {
-                "Chevstrap"
+                "Chevstrap Extended"
             }
 
             PAGE_ABOUT -> {

@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Chevstrap"
+rootProject.name = "ChevstrapExtended"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(

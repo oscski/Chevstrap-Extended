@@ -13,7 +13,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.chevstrap.rbx"
+        applicationId = "com.chevstrap.extended"
 
         minSdk = 26
         targetSdk = 37

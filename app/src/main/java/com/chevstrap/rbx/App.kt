@@ -30,14 +30,12 @@ class App : Application() {
 
     companion object {
         private var confManager: ConfigManager? = null
-        const val PROJECT_NAME = "Chevstrap"
-        const val PROJECT_REPOSITORY = "FrosSky/Chevstrap"
+        const val PROJECT_NAME = "Chevstrap Extended"
+        const val PROJECT_REPOSITORY = "oscski/Chevstrap-Extended"
         const val PROJECT_DOWNLOAD_LINK =
-            "https://github.com/FrosSky/Chevstrap/releases/latest"
-        const val DISCORD_SERVER_INVITE_LINK =
-            "https://discord.gg/invite/2UcmM842h4"
+            "https://github.com/oscski/Chevstrap-Extended/releases/latest"
         const val PROJECT_WIKI =
-            "https://github.com/FrosSky/Chevstrap/wiki"
+            "https://github.com/oscski/Chevstrap-Extended/wiki"
 
         private var _isSmallMode = false
         private var _userData = ""

@@ -84,7 +84,7 @@ jobs:
             exit 1
           fi
 
-          KEYSTORE="$RUNNER_TEMP/key-chevstrap.jks"
+          KEYSTORE="$RUNNER_TEMP/key-chevstrap-extended.jks"
 
           printf '%s' "$SIGNING_KEY" | base64 --decode > "$KEYSTORE"
 
@@ -168,7 +168,7 @@ jobs:
       - name: Upload Release APK
         uses: actions/upload-artifact@v6
         with:
-          name: Chevstrap (Release)
+          name: Chevstrap Extended (Release)
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14

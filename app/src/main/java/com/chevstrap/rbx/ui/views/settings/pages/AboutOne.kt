@@ -18,7 +18,7 @@ object AboutOne {
         fragment: AboutOneFragment
     ) {
         fragment.addAccordionMenu(
-            "Chevstrap",
+            "Chevstrap Extended",
             "",
             { addA(fragment, parentLayout) },
             1,
@@ -85,19 +85,6 @@ object AboutOne {
             },
             1
         )
-
-        uiHelpers.addButton(
-            ResourceManagerEx.getStringOrEmpty(
-                App.appContext,
-                R.string.common_discord_server
-            ),
-            "",
-            parentLayout,
-            MethodAction {
-                viewModel.discordServerPage()
-            },
-            1
-        )
     }
 
     fun addC(
@@ -106,10 +93,26 @@ object AboutOne {
     ) {
         uiHelpers.addButton(
             "FrosSky",
-            "",
+            ResourceManagerEx.getStringOrEmpty(
+                App.appContext,
+                R.string.about_contributors_frossky_desc_title
+            ),
             parentLayout,
             MethodAction {
                 viewModel.fsPage()
+            },
+            2
+        )
+
+        uiHelpers.addButton(
+            "oscski",
+            ResourceManagerEx.getStringOrEmpty(
+                App.appContext,
+                R.string.about_contributors_oscski_desc_title
+            ),
+            parentLayout,
+            MethodAction {
+                viewModel.oscskiPage()
             },
             2
         )
