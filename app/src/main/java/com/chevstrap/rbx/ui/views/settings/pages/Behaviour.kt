@@ -64,5 +64,21 @@ object Behaviour {
                 BehaviourViewModel::bringToLatestUpdate
             )
         )
+
+        fragment.addToggle(
+            ResourceManagerEx.getStringOrEmpty(
+                context,
+                R.string.menu_behaviour_use_root_access_title
+            ),
+            ResourceManagerEx.getStringOrEmpty(
+                context,
+                R.string.menu_behaviour_use_root_access_description
+            ),
+            parentLayout,
+            MethodPair(
+                viewModel,
+                BehaviourViewModel::useRootAccess
+            )
+        )
     }
 }

@@ -78,7 +78,7 @@
     <string name="context_menu_logs_viewer_view">View</string>
 
     <!-- Dialog -->
-    <string name="dialog_access_to_roblox_directories_is_blocked">Android restricts access to Roblox\'s directories, so Chevstrap Extended can\'t access them directly.\n\nLearn more here:</string>
+    <string name="dialog_access_to_roblox_directories_is_blocked">Android restricts access to Roblox\'s directories, so Chevstrap Extended can\'t access them directly. Run Chevstrap Extended together with Roblox inside the same Virtual Space, or enable root access on a rooted device.\n\nLearn more here:</string>
     <string name="dialog_modded_roblox_warning">Third-party modifications can interfere with Roblox. If you’re using a modified version of Roblox for exploits or reverse engineering, please uninstall it to ensure you’re not running a modified client, and get the native Roblox app from an official source such as Google Play.</string>
     <string name="dialog_device_full_storage">Your device doesn’t have enough storage to run Chevstrap Extended properly. Try clearing some space to continue.</string>
     <string name="dialog_failed_to_apply_changes">An issue occurred while applying changes to Roblox. More information:</string>
@@ -111,6 +111,8 @@
     <!-- Menu: Behaviour -->
     <string name="menu_behaviour_check_latest_release_description">Directs you to the latest Chevstrap Extended release page if your current version is outdated.</string>
     <string name="menu_behaviour_check_latest_release_title">Check latest release</string>
+    <string name="menu_behaviour_use_root_access_title">Use root access</string>
+    <string name="menu_behaviour_use_root_access_description">Allow Chevstrap Extended to read the Roblox directory via root (su) on rooted devices, instead of requiring a Virtual Space. You will be asked to grant root permission.</string>
     <string name="menu_behaviour_description">Configure what Chevstrap Extended should do when launching Roblox.</string>
     <string name="menu_behaviour_preferred_roblox_app_description">Select which Roblox app to use and apply changes.</string>
     <string name="menu_behaviour_preferred_roblox_app_title">Preferred Roblox app</string>
@@ -165,6 +167,8 @@
 
     <!-- Notifications -->
     <string name="notification_connected_to_a_server">Connected to a server</string>
+    <string name="notification_watcher_running">Watching Roblox activity</string>
+    <string name="notification_watcher_title">Activity Watcher</string>
     <string name="notification_server_location_failed">Failed to retrieve server location</string>
     <string name="notification_discord_rich_presence_visibility_controller_title">Discord Rich Presence</string>
     <string name="notification_discord_rich_presence_visibility_controller_description">Set the visibility of your Discord Rich Presence.</string>

@@ -12,6 +12,12 @@ class BehaviourViewModel {
             App.config.data.manualUpdateBootstrapper = value
         }
 
+    var useRootAccess: Boolean
+        get() = App.config.data.useRootAccess
+        set(value) {
+            App.config.data.useRootAccess = value
+        }
+
     var preferredRobloxApp: String
         get() {
             val value = App.config.data.preferredRobloxApp

@@ -1,12 +1,17 @@
 package com.chevstrap.rbx.integrations
 
+import android.app.ActivityManager
+import android.content.Context
 import chevstrap.extensions.FileTool
 import com.chevstrap.rbx.App
 import com.chevstrap.rbx.CustomWatcher
+import com.chevstrap.rbx.WatcherService
+import com.chevstrap.rbx.appDirectories.RobloxAccessMode
 import com.chevstrap.rbx.appDirectories.RobloxClientData
 import com.chevstrap.rbx.enums.ServerType
 import com.chevstrap.rbx.models.entities.ActivityData
 import com.chevstrap.rbx.ui.NotifyIconWrapper
+import com.chevstrap.rbx.utility.RootShell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,19 +47,61 @@ class ActivityWatcher {
     @JvmField
     var data: ActivityData? = null
 
+    companion object {
+        private const val PROCESS_CHECK_MISSES = 2
+    }
+
     private fun start() {
         val tag = "ActivityWatcher::start"
         data = ActivityData("")
 
-        val execPath = RobloxClientData().executablePath
+        val clientData = RobloxClientData()
+
+        val accessMode = try {
+            clientData.getAccessMode()
+        } catch (_: Exception) {
+            RobloxAccessMode.NONE
+        }
+
+        App.logger.writeLine(tag, "Roblox access mode: $accessMode")
+
+        // Resolve the log dir from the package that is actually reachable
+        // (may differ from the preferred one in settings).
+        val workingPkg = try {
+            clientData.findWorkingPackage()
+        } catch (_: Exception) {
+            null
+        }
+        App.logger.writeLine(tag, "Working Roblox package: $workingPkg")
+
+        val execPath = workingPkg
+            ?.let { clientData.executablePathForPackage(it) }
+            ?: clientData.executablePath
         if (execPath.isNullOrEmpty()) {
             App.logger.writeLine(tag, "Executable path is null or empty")
             App.isLastLogFoundOrMaybeNot = true
+            WatcherService.stop(App.appContext)
             return
         }
 
         isEnableRPC = App.config.data.showGameActivity
         discordRPC = CustomWatcher.getInstance().robloxDiscordRPC
+
+        if (accessMode == RobloxAccessMode.ROOT) {
+            startViaRoot(execPath, workingPkg)
+            return
+        }
+
+        if (accessMode == RobloxAccessMode.NONE) {
+            App.logger.writeLine(
+                tag,
+                "No readable Roblox directory (need Virtual Space or root). " +
+                        "Executable path: $execPath"
+            )
+            App.isLastLogFoundOrMaybeNot = true
+            WatcherService.stop(App.appContext)
+            return
+        }
 
         val logLocation = File(execPath, "logs")
         if (!logLocation.exists() && !logLocation.mkdirs()) {
@@ -73,6 +120,7 @@ class ActivityWatcher {
 
         var randomAccessFile: RandomAccessFile? = null
         var currentLogPath: String? = null
+        var processMisses = 0
 
         try {
             App.isLastLogFoundOrMaybeNot = true
@@ -158,6 +206,19 @@ class ActivityWatcher {
                 }
 
                 if (!hasReadData) {
+                    if (workingPkg != null) {
+                        if (isProcessAlive(workingPkg, false)) {
+                            processMisses = 0
+                        } else if (++processMisses >= PROCESS_CHECK_MISSES) {
+                            App.logger.writeLine(
+                                tag,
+                                "Roblox process $workingPkg exited. " +
+                                        "Stopping watcher."
+                            )
+                            dispose()
+                            return
+                        }
+                    }
                     Thread.sleep(500)
                 }
             }
@@ -194,6 +255,41 @@ class ActivityWatcher {
         }
     }
 
+    /**
+     * Best-effort check (no root) whether [packageName] still has a live
+     * process. Fail-open: returns true on any error so a broken probe can
+     * never kill a healthy watcher session.
+     */
+    private fun isRobloxProcessRunning(packageName: String): Boolean {
+        return try {
+            val ctx = App.appContext ?: return true
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                ?: return true
+            am.runningAppProcesses?.any { it.pkgList?.contains(packageName) == true }
+                ?: true
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    /**
+     * Pure liveness probe shared by both tail loops. Returns false when the
+     * Roblox process is confirmed gone; fail-open (true) on any error so a
+     * broken probe can never kill a healthy session. Callers count
+     * consecutive misses and stop the session at [PROCESS_CHECK_MISSES].
+     */
+    private fun isProcessAlive(packageName: String, isRoot: Boolean): Boolean {
+        return try {
+            if (isRoot) {
+                RootShell.isProcessRunning(packageName)
+            } else {
+                isRobloxProcessRunning(packageName)
+            }
+        } catch (_: Exception) {
+            true
+        }
+    }
+
     private fun getLatestLog(logLocation: File): File? {
         return try {
             FileTool.listFiles(logLocation)
@@ -215,6 +311,157 @@ class ActivityWatcher {
         try {
             file?.close()
         } catch (_: IOException) {
+        }
+    }
+
+    /**
+     * Tail Roblox logs through root `su` without ever writing into the
+     * Roblox private directory. Reads are incremental:
+     * `ls -1t` to find the newest log, then `tail -c +offset` for new bytes.
+     */
+    private fun startViaRoot(execPath: String, packageName: String?) {
+        val tag = "ActivityWatcher::startViaRoot"
+        val remoteLogDir = "$execPath/logs"
+
+        App.logger.writeLine(tag, "Watching logs via root from $remoteLogDir")
+        App.isLastLogFoundOrMaybeNot = true
+
+        var currentRemoteLog: String? = null
+        var offset = 0L
+        var leftover = ""
+        var processMisses = 0
+
+        try {
+            val initial = RootShell.latestFileName(remoteLogDir)
+            if (initial != null) {
+                currentRemoteLog = "$remoteLogDir/$initial"
+                offset = RootShell.fileLength(currentRemoteLog).coerceAtLeast(0L)
+                App.logger.writeLine(
+                    tag,
+                    "Starting from EOF: $initial ($offset bytes)"
+                )
+            } else {
+                App.logger.writeLine(
+                    tag,
+                    "No existing Roblox log found. Waiting for a new log..."
+                )
+            }
+
+            while (!isStopMonitoring) {
+                val latest = try {
+                    RootShell.latestFileName(remoteLogDir)
+                } catch (e: Exception) {
+                    App.logger.writeException(tag, e)
+                    Thread.sleep(1000)
+                    continue
+                }
+
+                if (latest == null) {
+                    Thread.sleep(500)
+                    continue
+                }
+
+                val remotePath = "$remoteLogDir/$latest"
+
+                if (currentRemoteLog != remotePath) {
+                    App.logger.writeLine(tag, "Detected new Roblox log: $latest")
+                    currentRemoteLog = remotePath
+                    offset = 0L
+                    leftover = ""
+                    App.logger.writeLine(tag, "Now watching: $latest")
+                    // Fall through to read from offset 0 on next loop pass.
+                }
+
+                val path = requireNotNull(currentRemoteLog)
+
+                val chunk = try {
+                    RootShell.readFromOffset(path, offset)
+                } catch (e: Exception) {
+                    App.logger.writeException(tag, e)
+                    ByteArray(0)
+                }
+
+                if (chunk.isEmpty()) {
+                    // No new data. A live game always appends to its log,
+                    // so only probe while idle: fast stop on close, zero
+                    // extra cost while playing.
+                    if (packageName != null) {
+                        if (isProcessAlive(packageName, true)) {
+                            processMisses = 0
+                        } else if (++processMisses >= PROCESS_CHECK_MISSES) {
+                            App.logger.writeLine(
+                                tag,
+                                "Roblox process $packageName exited. " +
+                                        "Stopping watcher."
+                            )
+                            dispose()
+                            return
+                        }
+                    }
+                    // Either no new data, or our offset is past EOF
+                    // (log rotated/truncated). Verify with a stat call.
+                    if (offset > 0) {
+                        val len = try {
+                            RootShell.fileLength(path)
+                        } catch (_: Exception) {
+                            -1L
+                        }
+                        when {
+                            len < 0 -> {
+                                // File vanished (rotation). Re-resolve next loop.
+                                currentRemoteLog = null
+                                offset = 0L
+                                leftover = ""
+                            }
+                            len < offset -> {
+                                App.logger.writeLine(
+                                    tag,
+                                    "Log file was truncated. Resetting reader."
+                                )
+                                offset = 0L
+                                leftover = ""
+                                continue
+                            }
+                        }
+                    }
+                    Thread.sleep(500)
+                    continue
+                }
+
+                offset += chunk.size
+
+                val text = leftover + try {
+                    String(chunk, Charsets.UTF_8)
+                } catch (_: Exception) {
+                    String(chunk, Charsets.ISO_8859_1)
+                }
+
+                val lines = text.split('\n')
+                // Last element may be a partial line; buffer it.
+                leftover = if (text.endsWith("\n")) "" else lines.last()
+                val complete = if (text.endsWith("\n")) lines else lines.dropLast(1)
+
+                for (raw in complete) {
+                    if (isStopMonitoring) break
+                    val line = raw.trimEnd('\r')
+                    if (line.isNotEmpty()) {
+                        handleLogEntry(line)
+                    }
+                }
+            }
+        } catch (e: InterruptedException) {
+            if (!isStopMonitoring) {
+                App.logger.writeLine(tag, "Activity watcher interrupted unexpectedly.")
+                App.logger.writeException(tag, e)
+            } else {
+                App.logger.writeLine(tag, "Activity watcher stopped.")
+            }
+            Thread.currentThread().interrupt()
+        } catch (e: Exception) {
+            App.logger.writeLine(tag, "Unexpected error in root activity watcher!")
+            App.logger.writeException(tag, e)
+        } finally {
+            App.isLastLogFoundOrMaybeNot = true
         }
     }
 
@@ -597,6 +844,10 @@ class ActivityWatcher {
             "Disposing activity watcher session"
         )
 
+        runCatching {
+            WatcherService.stop(App.appContext)
+        }
+
         try {
             if (isEnableRPC) {
                 discordRPC?.dispose()
@@ -652,6 +903,10 @@ class ActivityWatcher {
             executor.submit {
                 start()
             }
+
+            // Hold a foreground state so background network restrictions
+            // don't block API calls while the Roblox game is on screen.
+            WatcherService.start(App.appContext)
         } catch (e: Exception) {
             App.logger.writeLine(
                 tag,

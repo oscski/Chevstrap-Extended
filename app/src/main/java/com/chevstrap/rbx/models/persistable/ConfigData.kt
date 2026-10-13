@@ -13,6 +13,7 @@ data class ConfigData(
     var locale: String? = null,
     var manualUpdateBootstrapper: Boolean = true,
     var preferredRobloxApp: String = "global",
+    var useRootAccess: Boolean = true,
     var serverLocationIndicatorEnabled: Boolean = false,
     var discordSetOnlineStatus: String = "online",
     var discordAllowCustomPresence: Boolean = false,

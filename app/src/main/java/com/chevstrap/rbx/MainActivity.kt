@@ -5,12 +5,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import chevstrap.preference.PrefsManager
+import com.chevstrap.rbx.appDirectories.RobloxAccessMode
 import com.chevstrap.rbx.appDirectories.RobloxClientData
 import com.chevstrap.rbx.extensions.ResourceManagerEx
 import com.chevstrap.rbx.ui.Frontend
 import com.chevstrap.rbx.ui.views.main.MainMenuScreen
 import com.chevstrap.rbx.ui.viewModels.main.MainMenuScreenViewModel
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -100,35 +100,52 @@ class MainActivity : AppCompatActivity() {
         val robloxData =
             RobloxClientData()
 
-        val success =
-            try {
-                val path =
-                    robloxData.getRobloxDirectory(false)
-                if (path.isNullOrEmpty()) {
-                    false
-                } else {
-                    val robloxDirectory =
-                        File(path)
+        // Fast path: direct access (Virtual Space) is synchronous and cheap.
+        val directSuccess = try {
+            robloxData.isDirectAccessAvailable()
+        } catch (_: Exception) {
+            false
+        }
 
-                    robloxDirectory.exists() &&
-                            robloxDirectory.isDirectory
-                }
-            } catch (_: Exception) {
-                false
+        if (directSuccess) {
+            App.logger.writeLine(
+                "MainActivity::checkFirst",
+                "Roblox directory accessible directly (${RobloxAccessMode.DIRECT})"
+            )
+            return
+        }
+
+        // Slow path: root check spawns `su`, so keep it off the main thread
+        // (it also triggers the root permission prompt on first use).
+        Thread {
+            val mode = try {
+                robloxData.getAccessMode()
+            } catch (e: Exception) {
+                App.logger.writeException("MainActivity::checkFirst", e)
+                RobloxAccessMode.NONE
             }
 
-        if (!success) {
-            Frontend.showMessageBoxWithRunnable(
-                this,
-                ResourceManagerEx.getStringOrEmpty(
-                    App.appContext,
-                    R.string.dialog_access_to_roblox_directories_is_blocked
-                ) +
-                        " " + "https://github.com/FrosSky/Chevstrap/wiki/Access-to-Roblox-directories-is-blocked",
-                false,
-                { finish() },
-                null
+            App.logger.writeLine(
+                "MainActivity::checkFirst",
+                "Roblox access mode: $mode"
             )
-        }
+
+            if (mode != RobloxAccessMode.NONE) return@Thread
+
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                Frontend.showMessageBoxWithRunnable(
+                    this,
+                    ResourceManagerEx.getStringOrEmpty(
+                        App.appContext,
+                        R.string.dialog_access_to_roblox_directories_is_blocked
+                    ) +
+                            " " + "https://github.com/oscski/Chevstrap-Extended/wiki/Access-to-Roblox-directories-is-blocked",
+                    false,
+                    { finish() },
+                    null
+                )
+            }
+        }.start()
     }
 }
