@@ -113,6 +113,8 @@
     <string name="menu_behaviour_check_latest_release_title">Check latest release</string>
     <string name="menu_behaviour_use_root_access_title">Use root access</string>
     <string name="menu_behaviour_use_root_access_description">Allow Chevstrap Extended to read the Roblox directory via root (su) on rooted devices, instead of requiring a Virtual Space. You will be asked to grant root permission.</string>
+    <string name="menu_behaviour_use_shizuku_access_title">Use Shizuku access</string>
+    <string name="menu_behaviour_use_shizuku_access_description">Allow Chevstrap Extended to follow Roblox logs via Shizuku when direct and root access are unavailable. You will be asked to grant Shizuku permission.</string>
     <string name="menu_behaviour_description">Configure what Chevstrap Extended should do when launching Roblox.</string>
     <string name="menu_behaviour_preferred_roblox_app_description">Select which Roblox app to use and apply changes.</string>
     <string name="menu_behaviour_preferred_roblox_app_title">Preferred Roblox app</string>

@@ -18,6 +18,12 @@ class BehaviourViewModel {
             App.config.data.useRootAccess = value
         }
 
+    var useShizukuAccess: Boolean
+        get() = App.config.data.useShizukuAccess
+        set(value) {
+            App.config.data.useShizukuAccess = value
+        }
+
     var preferredRobloxApp: String
         get() {
             val value = App.config.data.preferredRobloxApp

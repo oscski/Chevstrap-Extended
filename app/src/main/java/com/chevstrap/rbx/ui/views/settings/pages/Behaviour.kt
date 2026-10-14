@@ -80,5 +80,21 @@ object Behaviour {
                 BehaviourViewModel::useRootAccess
             )
         )
+
+        fragment.addToggle(
+            ResourceManagerEx.getStringOrEmpty(
+                context,
+                R.string.menu_behaviour_use_shizuku_access_title
+            ),
+            ResourceManagerEx.getStringOrEmpty(
+                context,
+                R.string.menu_behaviour_use_shizuku_access_description
+            ),
+            parentLayout,
+            MethodPair(
+                viewModel,
+                BehaviourViewModel::useShizukuAccess
+            )
+        )
     }
 }

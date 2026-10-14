@@ -8,6 +8,7 @@
 		<package android:name="com.roblox.client" />
 		<package android:name="com.roblox.client.vnggames" />
 		<package android:name="com.roblox.client.samsunggalaxy" />
+		<package android:name="moe.shizuku.privileged.api" />
 	</queries>
 
 	<!-- Permissions -->
@@ -70,13 +71,20 @@
 			</intent-filter>
 		</receiver>
 
-		<!-- Activity watcher holder: keeps the UID foreground while the
-		     Roblox game is on screen so background network restrictions
-		     don't block log-adjacent API calls. -->
+		<!-- Activity watcher holder -->
 		<service
 			android:name=".WatcherService"
 			android:exported="false"
 			android:foregroundServiceType="dataSync" />
+
+		<!-- Shizuku permission flow -->
+		<provider
+			android:name="rikka.shizuku.ShizukuProvider"
+			android:authorities="${applicationId}.shizuku"
+			android:enabled="true"
+			android:exported="true"
+			android:grantUriPermissions="true"
+			android:multiprocess="false" />
 
 		<!-- Optional Apache HTTP Legacy -->
 		<uses-library

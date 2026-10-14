@@ -14,6 +14,7 @@ data class ConfigData(
     var manualUpdateBootstrapper: Boolean = true,
     var preferredRobloxApp: String = "global",
     var useRootAccess: Boolean = true,
+    var useShizukuAccess: Boolean = true,
     var serverLocationIndicatorEnabled: Boolean = false,
     var discordSetOnlineStatus: String = "online",
     var discordAllowCustomPresence: Boolean = false,

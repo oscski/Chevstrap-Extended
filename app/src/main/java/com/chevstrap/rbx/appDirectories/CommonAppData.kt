@@ -3,11 +3,13 @@ package com.chevstrap.rbx.appDirectories
 import android.content.pm.PackageManager
 import com.chevstrap.rbx.App
 import com.chevstrap.rbx.utility.RootShell
+import com.chevstrap.rbx.utility.ShizukuShell
 import java.io.File
 
 enum class RobloxAccessMode {
     DIRECT,
     ROOT,
+    SHIZUKU,
     NONE
 }
 
@@ -154,8 +156,10 @@ abstract class CommonAppData {
         // Check every known Roblox package, not just the preferred one:
         // the preference may be wrong, and PackageManager may be blind
         // to packages outside this profile. First DIRECT win wins,
-        // otherwise first ROOT win, otherwise NONE.
+        // otherwise first ROOT win, otherwise first SHIZUKU win,
+        // otherwise NONE.
         var rootCandidate: String? = null
+        var shizukuCandidate: String? = null
         for (pkg in KNOWN_ROBLOX_PACKAGES) {
             val dir = getDataDirForPackage(pkg, includeFiles = false) ?: continue
             if (isDirectDirReadable(dir)) {
@@ -168,6 +172,9 @@ abstract class CommonAppData {
             if (rootCandidate == null && isRootDirReadable(dir)) {
                 rootCandidate = pkg
             }
+            if (shizukuCandidate == null && isShizukuPackageUsable(pkg)) {
+                shizukuCandidate = pkg
+            }
         }
         if (rootCandidate != null) {
             App.logger.writeLine(
@@ -176,15 +183,24 @@ abstract class CommonAppData {
             )
             return RobloxAccessMode.ROOT
         }
+        if (shizukuCandidate != null) {
+            App.logger.writeLine(
+                "CommonAppData::getAccessMode",
+                "SHIZUKU via $shizukuCandidate"
+            )
+            return RobloxAccessMode.SHIZUKU
+        }
 
         // Fall back to single-package checks so existing callers keep
         // working and the detailed per-mode logs are still emitted.
         if (isDirectAccessAvailable()) return RobloxAccessMode.DIRECT
         if (isRootAccessAvailable()) return RobloxAccessMode.ROOT
+        if (isShizukuAccessAvailable()) return RobloxAccessMode.SHIZUKU
         App.logger.writeLine(
             "CommonAppData::getAccessMode",
             "NONE; roblox packages visible to root: " +
-                    RootShell.installedRobloxPackages()
+                    RootShell.installedRobloxPackages() +
+                    "; shizuku: " + ShizukuShell.describeStatus()
         )
         RootShell.diagnoseAccess(
             KNOWN_ROBLOX_PACKAGES.map { "/data/data/$it" }
@@ -204,7 +220,7 @@ abstract class CommonAppData {
         }
     }
 
-    /** Package actually reachable, preferring DIRECT over ROOT. Null if none. */
+    /** Package actually reachable, preferring DIRECT over ROOT over SHIZUKU. Null if none. */
     fun findWorkingPackage(): String? {
         for (pkg in KNOWN_ROBLOX_PACKAGES) {
             val dir = getDataDirForPackage(pkg, includeFiles = false) ?: continue
@@ -214,10 +230,45 @@ abstract class CommonAppData {
             val dir = getDataDirForPackage(pkg, includeFiles = false) ?: continue
             if (isRootDirReadable(dir)) return pkg
         }
+        for (pkg in KNOWN_ROBLOX_PACKAGES) {
+            if (isShizukuPackageUsable(pkg)) return pkg
+        }
         return try {
             executablePackage
         } catch (_: Exception) {
             null
+        }
+    }
+
+    /**
+     * True when Roblox logs are followable via Shizuku
+     * (shell uid, no root needed). Unlike the file modes this does not
+     * probe the private directory at all.
+     */
+    fun isShizukuAccessAvailable(): Boolean {
+        return try {
+            if (!isShizukuAccessEnabledByConfig()) {
+                App.logger.writeLine(
+                    "CommonAppData::isShizukuAccessAvailable",
+                    "disabled by config"
+                )
+                return false
+            }
+            val alive = ShizukuShell.isBinderAlive()
+            val granted = if (alive) ShizukuShell.isPermissionGranted() else false
+            val installed = if (granted) isAnyRobloxPackageInstalled() else false
+            App.logger.writeLine(
+                "CommonAppData::isShizukuAccessAvailable",
+                "binderAlive=$alive permissionGranted=$granted " +
+                        "robloxInstalled=$installed"
+            )
+            alive && granted && installed
+        } catch (e: Exception) {
+            App.logger.writeException(
+                "CommonAppData::isShizukuAccessAvailable",
+                e
+            )
+            false
         }
     }
 
@@ -228,6 +279,48 @@ abstract class CommonAppData {
             App.config.data.useRootAccess
         } catch (_: Exception) {
             true
+        }
+    }
+
+    private fun isShizukuAccessEnabledByConfig(): Boolean {
+        return try {
+            App.config.data.useShizukuAccess
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    /**
+     * True when [packageName] is a usable Shizuku target: Shizuku access
+     * enabled + permission granted + package installed (visible to
+     * PackageManager via our `<queries>` entries). Liveness (`pidof`)
+     * is deliberately not required here — Roblox may simply not be
+     * running yet when the mode is probed at startup.
+     */
+    private fun isShizukuPackageUsable(packageName: String): Boolean {
+        return try {
+            if (!isShizukuAccessEnabledByConfig()) return false
+            if (!ShizukuShell.isPermissionGranted()) return false
+            isPackageInstalled(packageName)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun isAnyRobloxPackageInstalled(): Boolean {
+        return try {
+            KNOWN_ROBLOX_PACKAGES.any { isPackageInstalled(it) }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun isPackageInstalled(packageName: String): Boolean {
+        return try {
+            App.appContext!!.packageManager.getApplicationInfo(packageName, 0)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
         }
     }
 

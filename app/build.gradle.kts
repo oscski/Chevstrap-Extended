@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.material)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     implementation(projects.gateway)
     implementation(projects.common)

@@ -12,13 +12,16 @@ import com.chevstrap.rbx.enums.ServerType
 import com.chevstrap.rbx.models.entities.ActivityData
 import com.chevstrap.rbx.ui.NotifyIconWrapper
 import com.chevstrap.rbx.utility.RootShell
+import com.chevstrap.rbx.utility.ShizukuShell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
+import java.io.InputStreamReader
 import java.io.RandomAccessFile
 import java.util.Date
 import java.util.concurrent.ExecutorService
@@ -89,6 +92,11 @@ class ActivityWatcher {
 
         if (accessMode == RobloxAccessMode.ROOT) {
             startViaRoot(execPath, workingPkg)
+            return
+        }
+
+        if (accessMode == RobloxAccessMode.SHIZUKU) {
+            startViaShizukuLogcat(workingPkg)
             return
         }
 
@@ -462,6 +470,196 @@ class ActivityWatcher {
             App.logger.writeException(tag, e)
         } finally {
             App.isLastLogFoundOrMaybeNot = true
+        }
+    }
+
+    /**
+     * Tail Roblox `FLog` lines through Shizuku
+     * (shell uid, no root, no private-dir reads). The stream is polled
+     * non-blockingly so the idle liveness probe (shared miss budget
+     * with the other tail loops) still fires when the game exits.
+     */
+    private fun startViaShizukuLogcat(packageName: String?) {
+        val tag = "ActivityWatcher::startViaShizuku"
+        App.logger.writeLine(
+            tag,
+            "Watching Roblox logcat via Shizuku (tag Roblox, no file reads)"
+        )
+        App.isLastLogFoundOrMaybeNot = true
+
+        var process: Process? = null
+        var reader: BufferedReader? = null
+        var skipHistoric = true
+        var openFailures = 0
+        var eofBreaks = 0
+        var processMisses = 0
+        // Set once any logcat line arrives (historic replay counts).
+        // The exit probe stays disabled until then, mirroring the file
+        // loops, which only probe while a log exists: the watcher must
+        // survive Roblox still launching (no pid yet, no lines yet).
+        var streamLive = false
+
+        fun openStream(): Boolean {
+            closeShizukuStream(process, reader)
+            process = null
+            reader = null
+            val proc = try {
+                ShizukuShell.openRobloxLogcat()
+            } catch (e: Exception) {
+                App.logger.writeException(tag, e)
+                null
+            }
+            if (proc == null) {
+                if (++openFailures >= 3) {
+                    App.logger.writeLine(
+                        tag,
+                        "Shizuku logcat unavailable (not running or denied). " +
+                                "Stopping watcher."
+                    )
+                    dispose()
+                    return false
+                }
+                try {
+                    Thread.sleep(1000)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return false
+                }
+                return true
+            }
+            openFailures = 0
+            process = proc
+            reader = BufferedReader(InputStreamReader(proc.inputStream))
+            // -T 1 replays one historic line on every (re)open; drop it
+            // so a stale "Joining game" never fires a false session.
+            skipHistoric = true
+            return true
+        }
+
+        try {
+            if (!openStream()) return
+            if (process == null) return
+
+            while (!isStopMonitoring) {
+                var drained = false
+                var hitEof = false
+                try {
+                    val r = reader
+                    if (r == null) {
+                        if (!openStream()) return
+                        if (process == null) return
+                        continue
+                    }
+                    while (!isStopMonitoring && r.ready()) {
+                        val line = r.readLine()
+                        if (line == null) {
+                            hitEof = true
+                            break
+                        }
+                        drained = true
+                        if (!streamLive) {
+                            streamLive = true
+                            eofBreaks = 0
+                            App.logger.writeLine(
+                                tag,
+                                "Logcat stream live, following Roblox logs"
+                            )
+                        }
+                        if (skipHistoric) {
+                            skipHistoric = false
+                            continue
+                        }
+                        if (line.isNotBlank()) {
+                            handleLogEntry(line)
+                        }
+                    }
+                    if (hitEof) {
+                        App.logger.writeLine(tag, "Logcat stream hit EOF, reopening.")
+                        if (++eofBreaks >= 5) {
+                            App.logger.writeLine(
+                                tag,
+                                "Logcat stream keeps dying. Stopping watcher."
+                            )
+                            dispose()
+                            return
+                        }
+                        if (!openStream()) return
+                        if (process == null) return
+                        continue
+                    }
+                    if (drained) {
+                        processMisses = 0
+                        eofBreaks = 0
+                        continue
+                    }
+                } catch (e: IOException) {
+                    App.logger.writeLine(tag, "Logcat stream broke, reopening.")
+                    App.logger.writeException(tag, e)
+                    if (!openStream()) return
+                    if (process == null) return
+                    continue
+                } catch (e: Exception) {
+                    App.logger.writeException(tag, e)
+                    Thread.sleep(1000)
+                    continue
+                }
+
+                // Idle: no new lines. Before the first line ever arrives
+                // Roblox may still be launching, so wait (like the file
+                // loops wait for a log) instead of probing. Once live,
+                // probe liveness so closing the game stops the session
+                // promptly, same as the file loops.
+                if (!streamLive) {
+                    Thread.sleep(500)
+                    continue
+                }
+                if (packageName != null) {
+                    val alive = try {
+                        ShizukuShell.isProcessRunning(packageName)
+                    } catch (_: Exception) {
+                        true
+                    }
+                    if (alive) {
+                        processMisses = 0
+                    } else if (++processMisses >= PROCESS_CHECK_MISSES) {
+                        App.logger.writeLine(
+                            tag,
+                            "Roblox process $packageName exited. " +
+                                    "Stopping watcher."
+                        )
+                        dispose()
+                        return
+                    }
+                }
+                Thread.sleep(500)
+            }
+        } catch (e: InterruptedException) {
+            if (!isStopMonitoring) {
+                App.logger.writeLine(tag, "Activity watcher interrupted unexpectedly.")
+                App.logger.writeException(tag, e)
+            } else {
+                App.logger.writeLine(tag, "Activity watcher stopped.")
+            }
+            Thread.currentThread().interrupt()
+        } catch (e: Exception) {
+            App.logger.writeLine(tag, "Unexpected error in Shizuku activity watcher!")
+            App.logger.writeException(tag, e)
+        } finally {
+            App.isLastLogFoundOrMaybeNot = true
+            closeShizukuStream(process, reader)
+        }
+    }
+
+    private fun closeShizukuStream(process: Process?, reader: BufferedReader?) {
+        try {
+            reader?.close()
+        } catch (_: IOException) {
+        }
+        if (process != null) {
+            try {
+                process.destroy()
+            } catch (_: Exception) {
+            }
         }
     }
 
