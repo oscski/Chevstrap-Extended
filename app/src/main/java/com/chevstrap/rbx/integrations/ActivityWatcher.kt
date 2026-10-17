@@ -1,7 +1,5 @@
 package com.chevstrap.rbx.integrations
 
-import android.app.ActivityManager
-import android.content.Context
 import chevstrap.extensions.FileTool
 import com.chevstrap.rbx.App
 import com.chevstrap.rbx.CustomWatcher
@@ -52,6 +50,14 @@ class ActivityWatcher {
 
     companion object {
         private const val PROCESS_CHECK_MISSES = 2
+
+        /**
+         * DIRECT mode has no reliable process probe, so the
+         * watcher stops once the Roblox log has not grown for this long.
+         * A live game keeps appending to its log, so a stall means the
+         * game is gone.
+         */
+        private const val DIRECT_LOG_STALE_TIMEOUT_MS = 30_000L
     }
 
     private fun start() {
@@ -128,7 +134,14 @@ class ActivityWatcher {
 
         var randomAccessFile: RandomAccessFile? = null
         var currentLogPath: String? = null
-        var processMisses = 0
+        // DIRECT mode cannot probe the Roblox process: ActivityManager on
+        // Android 8+ only reports our own processes, and Roblox runs under
+        // the virtual-space host package (so pkgList never contains it).
+        // Follow the log instead: an unreadable directory (virtual space
+        // gone) or a log that stops growing for
+        // DIRECT_LOG_STALE_TIMEOUT_MS is treated as death.
+        var logGrewOnce = false
+        var lastLogActivityMs = System.currentTimeMillis()
 
         try {
             App.isLastLogFoundOrMaybeNot = true
@@ -154,6 +167,27 @@ class ActivityWatcher {
                 latestLog = getLatestLog(logLocation)
 
                 if (latestLog == null) {
+                    // Either Roblox has not created its log yet, or the directory itself became unreadable.
+                    if (!isLogDirectoryReadable(logLocation)) {
+                        App.logger.writeLine(
+                            tag,
+                            "Roblox log directory " +
+                                    "${logLocation.absolutePath} is no longer " +
+                                    "readable. Stopping watcher."
+                        )
+                        dispose()
+                        return
+                    }
+                    if (logGrewOnce && isDirectLogStale(lastLogActivityMs)) {
+                        App.logger.writeLine(
+                            tag,
+                            "Roblox log has not grown for " +
+                                    "${DIRECT_LOG_STALE_TIMEOUT_MS / 1000}s. " +
+                                    "Stopping watcher."
+                        )
+                        dispose()
+                        return
+                    }
                     Thread.sleep(500)
                     continue
                 }
@@ -197,36 +231,45 @@ class ActivityWatcher {
 
                 var hasReadData = false
 
-                while (!isStopMonitoring) {
-                    val line = randomAccessFile.readLine() ?: break
-                    hasReadData = true
+                try {
+                    while (!isStopMonitoring) {
+                        val line = randomAccessFile.readLine() ?: break
+                        hasReadData = true
 
-                    val decodedLine = try {
-                        String(
-                            line.toByteArray(Charsets.ISO_8859_1),
-                            Charsets.UTF_8
-                        )
-                    } catch (_: Exception) {
-                        line
+                        val decodedLine = try {
+                            String(
+                                line.toByteArray(Charsets.ISO_8859_1),
+                                Charsets.UTF_8
+                            )
+                        } catch (_: Exception) {
+                            line
+                        }
+
+                        handleLogEntry(decodedLine)
                     }
-
-                    handleLogEntry(decodedLine)
+                } catch (e: IOException) {
+                    App.logger.writeLine(
+                        tag,
+                        "Failed to read Roblox log. Stopping watcher."
+                    )
+                    App.logger.writeException(tag, e)
+                    dispose()
+                    return
                 }
 
-                if (!hasReadData) {
-                    if (workingPkg != null) {
-                        if (isProcessAlive(workingPkg, false)) {
-                            processMisses = 0
-                        } else if (++processMisses >= PROCESS_CHECK_MISSES) {
-                            App.logger.writeLine(
-                                tag,
-                                "Roblox process $workingPkg exited. " +
-                                        "Stopping watcher."
-                            )
-                            dispose()
-                            return
-                        }
-                    }
+                if (hasReadData) {
+                    logGrewOnce = true
+                    lastLogActivityMs = System.currentTimeMillis()
+                } else if (logGrewOnce && isDirectLogStale(lastLogActivityMs)) {
+                    App.logger.writeLine(
+                        tag,
+                        "Roblox log has not grown for " +
+                                "${DIRECT_LOG_STALE_TIMEOUT_MS / 1000}s. " +
+                                "Stopping watcher."
+                    )
+                    dispose()
+                    return
+                } else {
                     Thread.sleep(500)
                 }
             }
@@ -264,38 +307,37 @@ class ActivityWatcher {
     }
 
     /**
-     * Best-effort check (no root) whether [packageName] still has a live
-     * process. Fail-open: returns true on any error so a broken probe can
-     * never kill a healthy watcher session.
+     * Root liveness probe (`pidof`). Returns false only when the Roblox
+     * process is confirmed gone; fail-open (true) on any error so a broken
+     * probe can never kill a healthy session. Callers count consecutive
+     * misses and stop the session at [PROCESS_CHECK_MISSES].
      */
-    private fun isRobloxProcessRunning(packageName: String): Boolean {
+    private fun isRootProcessAlive(packageName: String): Boolean {
         return try {
-            val ctx = App.appContext ?: return true
-            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                ?: return true
-            am.runningAppProcesses?.any { it.pkgList?.contains(packageName) == true }
-                ?: true
+            RootShell.isProcessRunning(packageName)
         } catch (_: Exception) {
             true
         }
     }
 
     /**
-     * Pure liveness probe shared by both tail loops. Returns false when the
-     * Roblox process is confirmed gone; fail-open (true) on any error so a
-     * broken probe can never kill a healthy session. Callers count
-     * consecutive misses and stop the session at [PROCESS_CHECK_MISSES].
+     * True while the Roblox log directory still exists and is listable.
+     * DIRECT mode relies on this: an unreadable directory means the
+     * virtual space (and Roblox with it) is gone.
      */
-    private fun isProcessAlive(packageName: String, isRoot: Boolean): Boolean {
+    private fun isLogDirectoryReadable(logLocation: File): Boolean {
         return try {
-            if (isRoot) {
-                RootShell.isProcessRunning(packageName)
-            } else {
-                isRobloxProcessRunning(packageName)
-            }
-        } catch (_: Exception) {
+            FileTool.listFiles(logLocation)
             true
+        } catch (_: Exception) {
+            false
         }
+    }
+
+    /** True once the Roblox log has been quiet for [DIRECT_LOG_STALE_TIMEOUT_MS]. */
+    private fun isDirectLogStale(lastActivityMs: Long): Boolean {
+        return System.currentTimeMillis() - lastActivityMs >=
+                DIRECT_LOG_STALE_TIMEOUT_MS
     }
 
     private fun getLatestLog(logLocation: File): File? {
@@ -394,7 +436,7 @@ class ActivityWatcher {
                     // so only probe while idle: fast stop on close, zero
                     // extra cost while playing.
                     if (packageName != null) {
-                        if (isProcessAlive(packageName, true)) {
+                        if (isRootProcessAlive(packageName)) {
                             processMisses = 0
                         } else if (++processMisses >= PROCESS_CHECK_MISSES) {
                             App.logger.writeLine(
