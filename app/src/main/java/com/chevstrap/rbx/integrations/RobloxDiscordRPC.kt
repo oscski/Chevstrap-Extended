@@ -264,8 +264,9 @@ class RobloxDiscordRPC(private val activityWatcher: ActivityWatcher) {
                                 ?: icons.small
 
                         smallText =
-                            custom?.smallText
-                                ?: icons.smallHoverText.orEmpty()
+                            (custom?.smallText
+                                ?: icons.smallHoverText)
+                                ?.takeIf { it.isNotBlank() }
                     }
 
                     val assets =

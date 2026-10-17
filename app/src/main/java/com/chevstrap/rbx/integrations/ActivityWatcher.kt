@@ -926,7 +926,7 @@ class ActivityWatcher {
                                     if (isEnableRPC) {
                                         NotifyIconWrapper.showDiscordRpcVisibilityNotification(
                                             it,
-                                            discordRPC?.isVisibleState() != null
+                                            discordRPC?.isVisibleState() == true
                                         )
                                     }
                                 }
