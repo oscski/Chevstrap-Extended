@@ -5,6 +5,8 @@ import android.widget.LinearLayout
 import com.chevstrap.rbx.R
 import com.chevstrap.rbx.enums.LaunchMode
 import com.chevstrap.rbx.extensions.ResourceManagerEx
+import com.chevstrap.rbx.ui.Frontend
+import com.chevstrap.rbx.ui.viewModels.MethodAction
 import com.chevstrap.rbx.ui.viewModels.MethodPair
 import com.chevstrap.rbx.ui.viewModels.settings.pages.BehaviourViewModel
 import org.json.JSONArray
@@ -65,7 +67,7 @@ object Behaviour {
             )
         )
 
-        fragment.addToggle(
+        val rootToggle = fragment.addToggle(
             ResourceManagerEx.getStringOrEmpty(
                 context,
                 R.string.menu_behaviour_use_root_access_title
@@ -81,7 +83,7 @@ object Behaviour {
             )
         )
 
-        fragment.addToggle(
+        val shizukuToggle = fragment.addToggle(
             ResourceManagerEx.getStringOrEmpty(
                 context,
                 R.string.menu_behaviour_use_shizuku_access_title
@@ -96,5 +98,43 @@ object Behaviour {
                 BehaviourViewModel::useShizukuAccess
             )
         )
+
+        // The opt-in prompts may revert the stored value asynchronously
+        // (user denied the root/Shizuku prompt). Re-sync the switches from
+        // the actual values once an attempt finishes.
+        viewModel.clearAccessStateListeners()
+        viewModel.addAccessStateListener {
+            fragment.syncToggle(rootToggle, viewModel.useRootAccess)
+            fragment.syncToggle(shizukuToggle, viewModel.useShizukuAccess)
+        }
+
+        viewModel.refreshAccessAvailability()
+
+        parentLayout?.let { parent ->
+            fragment.addSection(
+                parent,
+                ResourceManagerEx.getStringOrEmpty(
+                    context,
+                    R.string.menu_behaviour_access_section_title
+                )
+            )
+
+            fragment.addButton(
+                ResourceManagerEx.getStringOrEmpty(
+                    context,
+                    R.string.menu_behaviour_access_setup_title
+                ),
+                ResourceManagerEx.getStringOrEmpty(
+                    context,
+                    R.string.menu_behaviour_access_setup_description
+                ),
+                parent,
+                MethodAction {
+                    Frontend.showAccessSetup(
+                        fragment.requireActivity()
+                    )
+                }
+            )
+        }
     }
 }

@@ -1,12 +1,49 @@
 package com.chevstrap.rbx.ui
 
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentManager
 import com.chevstrap.rbx.App
 import com.chevstrap.rbx.R
 import com.chevstrap.rbx.extensions.ResourceManagerEx
+import com.chevstrap.rbx.ui.views.customDialogs.AccessSetupFragment
 import com.chevstrap.rbx.ui.views.customDialogs.MessageboxFragment
 
 object Frontend {
+
+    const val ACCESS_SETUP_TAG = "access_setup"
+
+    fun showAccessSetup(
+        activity: FragmentActivity?,
+        onDismissed: (() -> Unit)? = null
+    ) {
+        if (activity == null) return
+        if (activity.isFinishing || activity.isDestroyed) return
+
+        showAccessSetup(activity.supportFragmentManager, onDismissed)
+    }
+
+    fun showAccessSetup(
+        manager: FragmentManager?,
+        onDismissed: (() -> Unit)? = null
+    ) {
+        if (manager == null) return
+
+        if (manager.isStateSaved) return
+        if (manager.findFragmentByTag(ACCESS_SETUP_TAG) != null) return
+
+        val dialog = AccessSetupFragment()
+
+        dialog.setAccessSetupListener(
+            object : AccessSetupFragment.AccessSetupListener {
+                override fun onDismissed() {
+                    onDismissed?.invoke()
+                }
+            }
+        )
+
+        dialog.show(manager, ACCESS_SETUP_TAG)
+    }
+
     fun showExceptionDialog(activity: FragmentActivity?, message: String?, exception: Exception) {
         val dialog = MessageboxFragment()
 

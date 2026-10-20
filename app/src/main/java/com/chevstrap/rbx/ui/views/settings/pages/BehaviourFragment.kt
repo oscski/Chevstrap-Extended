@@ -13,7 +13,9 @@ import com.chevstrap.rbx.App
 import com.chevstrap.rbx.ConfigManager
 import com.chevstrap.rbx.R
 import com.chevstrap.rbx.extensions.ResourceManagerEx
+import com.chevstrap.rbx.ui.components.ComponentAppearance
 import com.chevstrap.rbx.ui.components.ComponentUtils
+import com.chevstrap.rbx.ui.components.holders.ToggleResult
 import com.chevstrap.rbx.ui.viewModels.MethodAction
 import com.chevstrap.rbx.ui.viewModels.MethodPair
 import org.json.JSONArray
@@ -64,8 +66,8 @@ class BehaviourFragment : Fragment() {
         description: String?,
         parent: LinearLayout?,
         method: MethodPair<*, Boolean>?
-    ) {
-        method ?: return
+    ): ToggleResult? {
+        method ?: return null
 
         val toggle =  ComponentUtils.addToggle(
             context,
@@ -75,6 +77,24 @@ class BehaviourFragment : Fragment() {
         )
 
         parent?.addView(toggle.toggleView)
+
+        return toggle
+    }
+
+    fun syncToggle(toggle: ToggleResult?, value: Boolean) {
+        val toggleSwitch = toggle?.toggleSwitch ?: return
+
+        toggleSwitch.post {
+            if (toggle.isChecked == value) return@post
+
+            toggle.isChecked = value
+
+            ComponentAppearance.updateToggleAppearance(
+                toggleSwitch,
+                value,
+                toggle.isEnabled
+            )
+        }
     }
 
     fun addButton(

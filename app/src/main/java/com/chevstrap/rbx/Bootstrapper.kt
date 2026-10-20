@@ -75,6 +75,15 @@ class Bootstrapper(
 
             if (cancelled.get()) return cleanup()
 
+            if (!hasRobloxAccess()) {
+                App.logger.writeLine(
+                    log,
+                    "No Roblox access; opening access setup instead of launching"
+                )
+                showAccessSetupDialog()
+                return cleanup()
+            }
+
             dialog = createDialog(context)
             showDialog()
 
@@ -458,6 +467,37 @@ class Bootstrapper(
 
             } finally {
                 cleanup()
+            }
+        }
+    }
+
+    /**
+     * True when Chevstrap currently has a usable way to reach Roblox's
+     * data (direct, root or Shizuku). Probing may spawn `su`, which is
+     * why this only runs on the bootstrapper's background thread.
+     */
+    private fun hasRobloxAccess(): Boolean {
+        return try {
+            RobloxClientData().isAccessible()
+        } catch (e: Exception) {
+            App.logger.writeException("Bootstrapper::hasRobloxAccess", e)
+            false
+        }
+    }
+
+    /**
+     * Opens the access setup screen (instead of launching) when access is
+     * missing.
+     */
+    private fun showAccessSetupDialog() {
+        val manager = fragmentManager
+        val activity = App.savedFragmentActivity
+
+        Handler(Looper.getMainLooper()).post {
+            if (manager != null) {
+                Frontend.showAccessSetup(manager)
+            } else {
+                Frontend.showAccessSetup(activity)
             }
         }
     }

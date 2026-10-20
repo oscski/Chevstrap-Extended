@@ -17,6 +17,28 @@
     <string name="about_title">About</string>
     <string name="about_translator_title">Translator</string>
 
+    <!-- Access setup -->
+    <string name="access_setup_title">Set up Roblox access</string>
+    <string name="access_setup_message">Chevstrap reads Roblox\'s logs to power its features, so it needs permission to reach Roblox\'s files. Pick one of the options below, then tap Re-check access. You can change this later in Launcher settings.</string>
+    <string name="access_setup_direct_title">Direct (Virtual Space)</string>
+    <string name="access_setup_direct_description">Allow Chevstrap to reach Roblox by running both in the same Virtual Space.</string>
+    <string name="access_setup_direct_open_wiki">Open wiki</string>
+    <string name="access_setup_root_title">Root (Rooted Device)</string>
+    <string name="access_setup_root_description">Allow Chevstrap to read Roblox\'s directory using root.</string>
+    <string name="access_setup_root_grant">Grant root</string>
+    <string name="access_setup_shizuku_title">Shizuku</string>
+    <string name="access_setup_shizuku_description">Allow Chevstrap to follow Roblox logs through Shizuku.</string>
+    <string name="access_setup_shizuku_grant">Grant Shizuku</string>
+    <string name="access_setup_shizuku_unavailable">Shizuku isn\'t running. Install it, start the Shizuku service, then try again.</string>
+    <string name="access_setup_status_checking">Checking for Roblox access…</string>
+    <string name="access_setup_status_none">No Roblox access detected yet.</string>
+    <string name="access_setup_status_direct">Access detected: direct (Virtual Space).</string>
+    <string name="access_setup_status_root">Access detected: root.</string>
+    <string name="access_setup_status_shizuku">Access detected: Shizuku.</string>
+    <string name="access_setup_recheck">Re-check access</string>
+    <string name="access_setup_continue">Continue</string>
+    <string name="access_setup_skip">Skip for now</string>
+
     <!-- Bootstrapper -->
     <string name="bootstrapper_status_applying_modifications">Applying changes to Roblox…</string>
     <string name="bootstrapper_status_connecting">Connecting to Roblox…</string>
@@ -111,10 +133,13 @@
     <!-- Menu: Behaviour -->
     <string name="menu_behaviour_check_latest_release_description">Directs you to the latest Chevstrap Extended release page if your current version is outdated.</string>
     <string name="menu_behaviour_check_latest_release_title">Check latest release</string>
+    <string name="menu_behaviour_access_setup_title">Roblox access setup</string>
+    <string name="menu_behaviour_access_setup_description">Choose how Chevstrap reaches Roblox\'s files: direct (Virtual Space), root, or Shizuku.</string>
+    <string name="menu_behaviour_access_section_title">Roblox access</string>
     <string name="menu_behaviour_use_root_access_title">Use root access</string>
-    <string name="menu_behaviour_use_root_access_description">Allow Chevstrap Extended to read the Roblox directory via root (su) on rooted devices, instead of requiring a Virtual Space. You will be asked to grant root permission.</string>
+    <string name="menu_behaviour_use_root_access_description">Allow Chevstrap to read Roblox\'s directory using root on rooted devices, instead of requiring a Virtual Space. You will be asked to grant root permission.</string>
     <string name="menu_behaviour_use_shizuku_access_title">Use Shizuku access</string>
-    <string name="menu_behaviour_use_shizuku_access_description">Allow Chevstrap Extended to follow Roblox logs via Shizuku when direct and root access are unavailable. You will be asked to grant Shizuku permission.</string>
+    <string name="menu_behaviour_use_shizuku_access_description">Allow Chevstrap to follow Roblox logs through Shizuku, doesn\'t require root or Virtual Space. You will be asked to grant Shizuku permission.</string>
     <string name="menu_behaviour_description">Configure what Chevstrap Extended should do when launching Roblox.</string>
     <string name="menu_behaviour_preferred_roblox_app_description">Select which Roblox app to use and apply changes.</string>
     <string name="menu_behaviour_preferred_roblox_app_title">Preferred Roblox app</string>
