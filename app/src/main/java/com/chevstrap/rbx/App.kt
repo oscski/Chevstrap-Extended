@@ -133,7 +133,7 @@ class App : Application() {
                 val logger = Logger.instance
                 logger.writeLine(
                     "App::onStartup",
-                    "Starting $PROJECT_NAME 2.0"
+                    "Starting $PROJECT_NAME 2.1"
                 )
 
                 logger.writeLine(
